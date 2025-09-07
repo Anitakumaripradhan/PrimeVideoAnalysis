@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prime Video Analysis Dashboard</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Custom Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@0.292.0/dist/umd/lucide.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0F171E;
+            color: #E1E1E1;
+            overflow-x: hidden;
+        }
+        .prime-blue {
+            color: #00A8E1;
+        }
+        .prime-bg-blue {
+            background-color: #00A8E1;
+        }
+        .glass-card {
+            background: rgba(26, 36, 47, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1.5rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+        .glass-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 168, 225, 0.1), 0 8px 10px -6px rgba(0, 168, 225, 0.1);
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0F171E; }
+        ::-webkit-scrollbar-thumb { background: #00A8E1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #007ba1; }
+
+        /* Donut Chart */
+        .donut-chart {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: conic-gradient(#00A8E1 0% 80.8%, #4a5a6a 80.8% 100%);
+        }
+        .donut-chart::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100px;
+            height: 100px;
+            background-color: #1A242F;
+            border-radius: 50%;
+        }
+        .donut-center-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        
+        /* Background decorative gradients */
+        .background-glow {
+            position: absolute;
+            z-index: -1;
+            opacity: 0.15;
+            filter: blur(120px);
+        }
+        .glow-top-left { top: -150px; left: -150px; width: 400px; height: 400px; background: #00A8E1; border-radius: 50%; }
+        .glow-bottom-right { bottom: -200px; right: -200px; width: 500px; height: 500px; background: #7928CA; border-radius: 50%; }
+        
+        .table-row-hover:hover { background-color: rgba(0, 168, 225, 0.05); }
+
+        /* Modal styles */
+        .modal-backdrop {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 50; opacity: 0; visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .modal-backdrop.visible { opacity: 1; visibility: visible; }
+        .modal-content { transform: scale(0.95); transition: transform 0.3s ease; }
+        .modal-backdrop.visible .modal-content { transform: scale(1); }
+
+        /* Loader */
+        .loader {
+            border: 2px solid #374151; /* gray-700 */
+            border-top: 2px solid #00A8E1;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Pulse animation for AI buttons */
+        .pulse-animate { animation: pulse 2s infinite; }
+        @keyframes pulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(0, 168, 225, 0.7); }
+          70% { box-shadow: 0 0 0 10px rgba(0, 168, 225, 0); }
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="relative flex min-h-screen">
+        <div class="background-glow glow-top-left"></div>
+        <div class="background-glow glow-bottom-right"></div>
+        
+        <!-- Sidebar Navigation -->
+        <aside class="w-64 bg-black bg-opacity-20 p-6 hidden lg:flex flex-col flex-shrink-0">
+            <div class="flex items-center space-x-3 mb-10">
+                <svg class="w-10 h-10 prime-blue" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M22.61,7.39a3.29,3.29,0,0,0-2.34-1,3.42,3.42,0,0,0-1.41.32,3.31,3.31,0,0,0-1.51,1.15A3,3,0,0,0,17,7.39a2.5,2.5,0,0,0-.19,1,2.83,2.83,0,0,0,.52,1.69,3.3,3.3,0,0,0,1.25,1.15,3.45,3.45,0,0,0,3.36-.32,3.26,3.26,0,0,0,1.87-3A3.24,3.24,0,0,0,22.61,7.39Zm-1.46,2.16a1.57,1.57,0,0,1-1.35.64,1.83,1.83,0,0,1-1.78-1.08,1.39,1.39,0,0,1-.13-.67,1.15,1.15,0,0,1,.13-.51,1.74,1.74,0,0,1,.81-1,1.88,1.88,0,0,1,2.35.39,1.72,1.72,0,0,1,.39,2.16A1.69,1.69,0,0,1,21.15,9.55Z"/><path d="M12.44,17.4a4,4,0,0,0,3.52-2.26c.2-.4.19-.7-.14-1s-2-2.12-2.82-3A10.43,10.43,0,0,0,9,13.25a3.64,3.64,0,0,0-2.31.8,4.19,4.19,0,0,0-1.45,3.13,1.3,1.3,0,0,0,0,.33,3.83,3.83,0,0,0,2.55,3.25,5.1,5.1,0,0,0,4.24-.7,1,1,0,0,0,.43-.6,1,1,0,0,0-.4-.93,3.14,3.14,0,0,1-1.89-.41,2,2,0,0,1-1.35-2.28,2.2,2.2,0,0,1,1.22-1.74,6.7,6.7,0,0,1,2.55-.18C12,12.33,13.66,14.21,14,14.73a1.49,1.49,0,0,1-1.56,2.2,2.25,2.25,0,0,1-2.09-1.39.71.71,0,0,0-.67-.47.74.74,0,0,0-.73.72.72.72,0,0,0,.52.7,3.58,3.58,0,0,0,3.14,2.26,3.8,3.8,0,0,0,3.92-3.83,4,4,0,0,0-.91-2.48c.32-.29,1.33-1.2,1.69-1.56s.39-.39.11-1a2.38,2.38,0,0,0-2.3-1.4,11.83,11.83,0,0,1-4.27-2.06,1,1,0,0,0-1.28,0,12.4,12.4,0,0,1-4.4,2.06A2.32,2.32,0,0,0,1,11.33a.85.85,0,0,0,.14,1,1.18,1.18,0,0,0,.4.32c.36.17,1.2.54,1.56.67S4,14,4.2,14.4s.07.8-.26.94a2.2,2.2,0,0,1-1.12.31A4.2,4.2,0,0,1,0,13.11,4.42,4.42,0,0,1,1.3,8.44a4.08,4.08,0,0,1,3.46-2.12,13.33,13.33,0,0,0,5.08,0A4.08,4.08,0,0,1,13.3,6.32a4.42,4.42,0,0,1,1.3,4.67,4.2,4.2,0,0,1-2.82,2.54,2.2,2.2,0,0,1-1.12-.31c-.33-.14-.33-.54-.26-.94s.4-.8.6-1.12,1.2-.5,1.56-.67.4-.32.4-.32.14-.39-.11-1a2.38,2.38,0,0,0-2.3-1.4,11.83,11.83,0,0,1-4.27-2.06,1,1,0,0,0-1.28,0,12.4,12.4,0,0,1-4.4,2.06A2.32,2.32,0,0,0,1,11.33a.85.85,0,0,0,.14,1,1.18,1.18,0,0,0,.4.32Z"/></svg>
+                <h1 class="text-xl font-bold tracking-tight">Prime Video</h1>
+            </div>
+            <nav class="flex-1">
+                <ul class="space-y-2">
+                    <li><a href="#" class="flex items-center p-3 rounded-lg prime-bg-blue text-white font-semibold shadow-lg"><i data-lucide="layout-grid" class="w-5 h-5 mr-3"></i> Dashboard</a></li>
+                    <li><a href="#" class="flex items-center p-3 rounded-lg text-gray-400 hover:bg-white/10 transition-colors"><i data-lucide="film" class="w-5 h-5 mr-3"></i> Movies</a></li>
+                    <li><a href="#" class="flex items-center p-3 rounded-lg text-gray-400 hover:bg-white/10 transition-colors"><i data-lucide="tv" class="w-5 h-5 mr-3"></i> TV Shows</a></li>
+                    <li><a href="#" class="flex items-center p-3 rounded-lg text-gray-400 hover:bg-white/10 transition-colors"><i data-lucide="bar-chart-2" class="w-5 h-5 mr-3"></i> Analytics</a></li>
+                     <li><a href="#" class="flex items-center p-3 rounded-lg text-gray-400 hover:bg-white/10 transition-colors"><i data-lucide="star" class="w-5 h-5 mr-3"></i> Ratings</a></li>
+                </ul>
+            </nav>
+             <div class="mt-auto">
+                <a href="#" class="flex items-center p-3 rounded-lg text-gray-400 hover:bg-white/10 transition-colors"><i data-lucide="settings" class="w-5 h-5 mr-3"></i> Settings</a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+            <header class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                 <div>
+                    <h1 class="text-3xl font-bold tracking-tight text-white">Analytics Dashboard</h1>
+                    <p class="text-gray-400 mt-1">An overview of content available on Prime Video.</p>
+                 </div>
+                 <div class="flex items-center space-x-4 mt-4 sm:mt-0">
+                     <div class="relative hidden sm:block">
+                         <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"></i>
+                         <input type="text" placeholder="Search content..." class="bg-black bg-opacity-20 border border-white/10 rounded-lg pl-10 pr-4 py-2 w-full sm:w-auto focus:outline-none focus:ring-2 focus:ring-prime-blue">
+                     </div>
+                     <button class="p-2 rounded-full hover:bg-white/10"><i data-lucide="bell" class="w-6 h-6"></i></button>
+                     <img src="https://placehold.co/40x40/00A8E1/FFFFFF?text=A" alt="User Avatar" class="w-10 h-10 rounded-full border-2 border-prime-blue">
+                 </div>
+            </header>
+            
+            <!-- KPIs -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                <div class="glass-card">
+                    <h3 class="text-gray-400 text-lg font-medium">Total Titles</h3>
+                    <p class="text-4xl font-bold mt-2 prime-blue">9,668</p>
+                </div>
+                <div class="glass-card">
+                    <h3 class="text-gray-400 text-lg font-medium">Movies</h3>
+                    <p class="text-4xl font-bold mt-2 text-white">7,814</p>
+                </div>
+                <div class="glass-card">
+                    <h3 class="text-gray-400 text-lg font-medium">TV Shows</h3>
+                    <p class="text-4xl font-bold mt-2 text-white">1,854</p>
+                </div>
+            </div>
+
+            <!-- Visualizations -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                <div class="glass-card lg:col-span-1">
+                    <h3 class="text-xl font-semibold mb-4 text-white">Content Distribution</h3>
+                    <div class="flex items-center justify-center pt-4">
+                        <div class="donut-chart">
+                             <div class="donut-center-text">
+                                <div class="text-3xl font-bold text-white">81%</div>
+                                <div class="text-sm text-gray-400">Movies</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="glass-card lg:col-span-2">
+                    <h3 class="text-xl font-semibold text-white">Top Genres</h3>
+                    <ul class="space-y-4 pt-4">
+                        <li class="grid grid-cols-5 items-center gap-4"><span class="col-span-1 text-gray-300">Drama</span><div class="col-span-4 bg-white/10 rounded-full h-3"><div class="prime-bg-blue h-3 rounded-full" style="width: 95%"></div></div></li>
+                        <li class="grid grid-cols-5 items-center gap-4"><span class="col-span-1 text-gray-300">Comedy</span><div class="col-span-4 bg-white/10 rounded-full h-3"><div class="prime-bg-blue h-3 rounded-full" style="width: 88%"></div></div></li>
+                        <li class="grid grid-cols-5 items-center gap-4"><span class="col-span-1 text-gray-300">Action</span><div class="col-span-4 bg-white/10 rounded-full h-3"><div class="prime-bg-blue h-3 rounded-full" style="width: 80%"></div></div></li>
+                        <li class="grid grid-cols-5 items-center gap-4"><span class="col-span-1 text-gray-300">Suspense</span><div class="col-span-4 bg-white/10 rounded-full h-3"><div class="prime-bg-blue h-3 rounded-full" style="width: 72%"></div></div></li>
+                    </ul>
+                </div>
+
+                <!-- Gemini API: AI Insights -->
+                <div class="glass-card lg:col-span-2">
+                    <h3 class="text-xl font-semibold text-white mb-4">AI-Powered Insights</h3>
+                    <div id="ai-insights-content" class="text-gray-300 flex-1 space-y-2">Click the button to generate an analysis of the dashboard data.</div>
+                    <div class="mt-4 flex-shrink-0">
+                        <button id="get-insights-btn" class="prime-bg-blue text-white font-semibold py-2 px-4 rounded-lg flex items-center justify-center w-full sm:w-auto hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span id="insights-btn-text" class="mr-2">✨ Get AI Insights</span>
+                            <div id="insights-loader" class="loader hidden"></div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Gemini API: Movie Idea Generator -->
+                <div class="glass-card lg:col-span-1">
+                     <h3 class="text-xl font-semibold text-white mb-4">Creative Corner</h3>
+                     <p class="text-gray-300 flex-1">Want a new movie idea? Let AI spark your creativity.</p>
+                     <div class="mt-4 flex-shrink-0">
+                        <button id="open-modal-btn" class="w-full bg-purple-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors pulse-animate">
+                            🎬 Generate a Movie Idea
+                        </button>
+                     </div>
+                </div>
+                 
+                 <div class="glass-card lg:col-span-3">
+                    <h3 class="text-xl font-semibold text-white mb-4">Recently Added</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="border-b border-white/10">
+                                    <th class="py-3 px-4 font-semibold">Title</th>
+                                    <th class="py-3 px-4 font-semibold hidden sm:table-cell">Type</th>
+                                    <th class="py-3 px-4 font-semibold hidden md:table-cell">Rating</th>
+                                    <th class="py-3 px-4 font-semibold">Release Year</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="table-row-hover"><td class="py-3 px-4">The Grand Seduction</td><td class="py-3 px-4 text-gray-400 hidden sm:table-cell">Movie</td><td class="py-3 px-4 hidden md:table-cell"><span class="bg-gray-700 text-xs font-semibold px-2.5 py-1 rounded-full">13+</span></td><td class="py-3 px-4 text-gray-400">2014</td></tr>
+                                <tr class="table-row-hover"><td class="py-3 px-4">Maradona: Blessed Dream</td><td class="py-3 px-4 text-gray-400 hidden sm:table-cell">TV Show</td><td class="py-3 px-4 hidden md:table-cell"><span class="bg-red-900 text-red-300 text-xs font-semibold px-2.5 py-1 rounded-full">TV-MA</span></td><td class="py-3 px-4 text-gray-400">2021</td></tr>
+                                <tr class="table-row-hover"><td class="py-3 px-4">Harry Brown</td><td class="py-3 px-4 text-gray-400 hidden sm:table-cell">Movie</td><td class="py-3 px-4 hidden md:table-cell"><span class="bg-yellow-900 text-yellow-300 text-xs font-semibold px-2.5 py-1 rounded-full">R</span></td><td class="py-3 px-4 text-gray-400">2010</td></tr>
+                                 <tr class="table-row-hover"><td class="py-3 px-4">The Tomorrow War</td><td class="py-3 px-4 text-gray-400 hidden sm:table-cell">Movie</td><td class="py-3 px-4 hidden md:table-cell"><span class="bg-blue-900 text-blue-300 text-xs font-semibold px-2.5 py-1 rounded-full">PG-13</span></td><td class="py-3 px-4 text-gray-400">2021</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="glass-card lg:col-span-2">
+                    <h3 class="text-xl font-semibold text-white mb-4">Top Countries by Content</h3>
+                    <div class="space-y-4 pt-4">
+                        <div class="flex items-center gap-4"><span class="w-28 text-gray-300">United States</span><div class="flex-1 bg-white/10 rounded-full h-4"><div class="prime-bg-blue h-4 rounded-full" style="width: 98%"></div></div><span class="font-semibold">2,531</span></div>
+                        <div class="flex items-center gap-4"><span class="w-28 text-gray-300">India</span><div class="flex-1 bg-white/10 rounded-full h-4"><div class="prime-bg-blue h-4 rounded-full" style="width: 85%"></div></div><span class="font-semibold">2,293</span></div>
+                        <div class="flex items-center gap-4"><span class="w-28 text-gray-300">United Kingdom</span><div class="flex-1 bg-white/10 rounded-full h-4"><div class="prime-bg-blue h-4 rounded-full" style="width: 40%"></div></div><span class="font-semibold">614</span></div>
+                        <div class="flex items-center gap-4"><span class="w-28 text-gray-300">Canada</span><div class="flex-1 bg-white/10 rounded-full h-4"><div class="prime-bg-blue h-4 rounded-full" style="width: 25%"></div></div><span class="font-semibold">321</span></div>
+                    </div>
+                </div>
+                <div class="glass-card lg:col-span-1">
+                    <h3 class="text-xl font-semibold text-white mb-4">Most Common Ratings</h3>
+                    <div class="space-y-3 pt-4">
+                        <div class="flex items-center justify-between"><span class="text-gray-300">13+</span><span class="font-semibold text-white">2,117 titles</span></div>
+                        <div class="flex items-center justify-between"><span class="text-gray-300">16+</span><span class="font-semibold text-white">1,568 titles</span></div>
+                        <div class="flex items-center justify-between"><span class="text-gray-300">ALL</span><span class="font-semibold text-white">1,233 titles</span></div>
+                        <div class="flex items-center justify-between"><span class="text-gray-300">R</span><span class="font-semibold text-white">520 titles</span></div>
+                    </div>
+                </div>
+            </div>
+             
+            <footer class="text-center mt-8 text-gray-500 text-sm">
+                <p>Dashboard created with data from Amazon Prime Video Titles. For analytical purposes only.</p>
+            </footer>
+        </main>
+    </div>
+
+    <!-- Movie Idea Modal -->
+    <div id="movie-modal" class="modal-backdrop">
+        <div class="modal-content glass-card w-11/12 max-w-lg mx-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl font-bold text-white">Movie Idea Generator</h3>
+                <button id="close-modal-btn" class="text-gray-400 hover:text-white">&times;</button>
+            </div>
+            
+            <div class="mb-4">
+                <label for="genre-select" class="block text-sm font-medium text-gray-300 mb-2">Select a Genre:</label>
+                <select id="genre-select" class="w-full bg-black bg-opacity-30 border border-white/20 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-prime-blue">
+                    <option>Drama</option>
+                    <option>Comedy</option>
+                    <option>Action</option>
+                    <option>Suspense</option>
+                </select>
+            </div>
+
+            <div id="movie-idea-content" class="bg-black bg-opacity-20 p-4 rounded-lg min-h-[150px] text-gray-300">Select a genre and click generate!</div>
+            
+            <div class="mt-6 flex justify-end">
+                 <button id="generate-idea-btn" class="bg-purple-600 text-white font-semibold py-2 px-5 rounded-lg flex items-center justify-center hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span id="idea-btn-text" class="mr-2">Generate</span>
+                    <div id="idea-loader" class="loader hidden"></div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // --- Gemini API Call Function ---
+        async function callGeminiAPI(prompt) {
+            const apiKey = ""; // Leave as-is
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+            };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API call failed with status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                const candidate = result.candidates?.[0];
+
+                if (candidate && candidate.content?.parts?.[0]?.text) {
+                    return candidate.content.parts[0].text;
+                } else {
+                    let errorMessage = "Could not extract text from API response.";
+                    if (result.promptFeedback && result.promptFeedback.blockReason) {
+                        errorMessage += ` Blocked for: ${result.promptFeedback.blockReason}`;
+                    }
+                    throw new Error(errorMessage);
+                }
+            } catch (error) {
+                console.error("Error calling Gemini API:", error);
+                return "Sorry, something went wrong while generating the content. Please try again.";
+            }
+        }
+
+        // --- AI Insights Feature ---
+        const getInsightsBtn = document.getElementById('get-insights-btn');
+        const insightsContent = document.getElementById('ai-insights-content');
+        const insightsLoader = document.getElementById('insights-loader');
+        const insightsBtnText = document.getElementById('insights-btn-text');
+
+        getInsightsBtn.addEventListener('click', async () => {
+            insightsBtnText.classList.add('hidden');
+            insightsLoader.classList.remove('hidden');
+            getInsightsBtn.disabled = true;
+            
+            insightsContent.innerHTML = "Generating analysis...";
+
+            const stats = `Total Titles: 9,668, Movies: 7,814, TV Shows: 1,854. This means about 81% of the content is movies. The top genres are Drama, Comedy, Action, and Suspense.`;
+            const prompt = `Analyze the following statistics about the Prime Video library and provide a concise, bulleted list of key insights. The tone should be like a data analyst presenting findings. Statistics: ${stats}`;
+            
+            const result = await callGeminiAPI(prompt);
+            insightsContent.innerHTML = result.replace(/\*/g, '<br>• '); // Basic markdown to HTML for bullets
+            
+            insightsBtnText.classList.remove('hidden');
+            insightsLoader.classList.add('hidden');
+            getInsightsBtn.disabled = false;
+        });
+
+        // --- Movie Idea Generator Modal ---
+        const openModalBtn = document.getElementById('open-modal-btn');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        const modal = document.getElementById('movie-modal');
+        const generateIdeaBtn = document.getElementById('generate-idea-btn');
+        const movieIdeaContent = document.getElementById('movie-idea-content');
+        const genreSelect = document.getElementById('genre-select');
+        const ideaLoader = document.getElementById('idea-loader');
+        const ideaBtnText = document.getElementById('idea-btn-text');
+        
+        openModalBtn.addEventListener('click', () => modal.classList.add('visible'));
+        closeModalBtn.addEventListener('click', () => modal.classList.remove('visible'));
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('visible');
+            }
+        });
+
+        generateIdeaBtn.addEventListener('click', async () => {
+            ideaBtnText.classList.add('hidden');
+            ideaLoader.classList.remove('hidden');
+            generateIdeaBtn.disabled = true;
+
+            const selectedGenre = genreSelect.value;
+            movieIdeaContent.innerHTML = `Generating a ${selectedGenre} movie idea...`;
+            
+            const prompt = `Generate a compelling, one-paragraph movie idea for the ${selectedGenre} genre. Include a creative title, a short logline, and a brief synopsis. Format it nicely with headings for Title, Logline, and Synopsis.`;
+
+            const result = await callGeminiAPI(prompt);
+            movieIdeaContent.innerHTML = result.replace(/\*\*(.*?)\*\*/g, '<strong class="text-white">$1</strong>').replace(/\n/g, '<br>');
+            
+            ideaBtnText.classList.remove('hidden');
+            ideaLoader.classList.add('hidden');
+            generateIdeaBtn.disabled = false;
+        });
+
+    </script>
+
+</body>
+</html>
+
